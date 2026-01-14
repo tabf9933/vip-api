@@ -1,7 +1,18 @@
 const express = require("express");
-const app = express();
+const { Pool } = require("pg");
 
+const app = express();
 app.use(express.json());
+
+// Create Postgres connection pool (Railway variables)
+const pool = new Pool({
+  host: process.env.PGHOST,
+  user: process.env.PGUSER,
+  password: process.env.PGPASSWORD,
+  database: process.env.PGDATABASE,
+  port: process.env.PGPORT,
+  ssl: { rejectUnauthorized: false }
+});
 
 // TEMP VIP DATA (later we connect database)
 const vipLevels = [
