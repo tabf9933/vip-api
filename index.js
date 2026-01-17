@@ -138,3 +138,63 @@ app.get("/vip/levels", async (req, res) => {
     res.status(500).json({ error: "Failed to load VIP levels" });
   }
 });
+
+// Add VIP points and auto-upgrade level
+app.post("/vip/add-points", async (req, res) => {
+  const { user_id, points } = req.body;
+
+  if (!user_id || !points) {
+    return res.status(400).json({ error: "user_id and points required" });
+  }
+
+  try {
+    // 1️⃣ Get user
+    const userResult = await pool.query(
+      "SELECT * FROM users WHERE user_id = $1",
+      [user_id]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const user = userResult.rows[0];
+    const newPoints = user.vip_points + points;
+
+    // 2️⃣ Get VIP levels
+    const vipResult = await pool.query(
+      "SELECT * FROM vip_levels ORDER BY level ASC"
+    );
+    const vipLevels = vipResult.rows;
+
+    // 3️⃣ Calculate new VIP level
+    let newLevel = user.vip_level;
+    let newLevelName = "";
+
+    for (const lvl of vipLevels) {
+      if (newPoints >= lvl.min_points) {
+        newLevel = lvl.level;
+        newLevelName = lvl.name;
+      }
+    }
+
+    // 4️⃣ Update user
+    await pool.query(
+      "UPDATE users SET vip_points = $1, vip_level = $2 WHERE user_id = $3",
+      [newPoints, newLevel, user_id]
+    );
+
+    res.json({
+      user_id,
+      old_level: user.vip_level,
+      new_level: newLevel,
+      new_level_name: newLevelName,
+      total_points: newPoints,
+      upgraded: newLevel > user.vip_level
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to add points" });
+  }
+});
