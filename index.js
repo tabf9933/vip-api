@@ -125,3 +125,16 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`VIP API running on port ${PORT}`);
 });
+
+// Get all VIP levels (for frontend / logic)
+app.get("/vip/levels", async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM vip_levels ORDER BY level ASC"
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load VIP levels" });
+  }
+});
